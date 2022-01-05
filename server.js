@@ -2,11 +2,17 @@ const path = require('path');
 const express = require('express');
 const app = express();
 const server = require('http').createServer(app);
-const io = require('socket.io')(server);
+const { Server } = require('socket.io');
 
 const ACTIONS = require('./src/socket/actions');
 const { validate, version } = require('uuid');
 const PORT = process.env.PORT || 3001;
+
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+  }
+});
 
 const getClientRooms = () => {
     const {rooms} = io.sockets.adapter;
@@ -30,8 +36,8 @@ io.on('connection', socket => {
         if(Array.from(joinedRooms).includes(roomId)) {
             return console.warn(`Already joined to ${roomId}`)
         }
-
-        const clients = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
+        console.log(io.sockets.adapter);
+        const clients = Array.from(io.sockets?.adapter?.rooms.get(roomId) || []);
 
         clients.forEach(clientId => {
             io.to(clientId).emit(ACTIONS.ADD_PEER, {
