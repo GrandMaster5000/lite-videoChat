@@ -18,7 +18,7 @@ export default function Main() {
     }, [])
 
     return (
-        <div>
+        <div ref={rootNode}>
            <h1>Available Rooms</h1>
            <ul>
                {rooms.map(roomId => (

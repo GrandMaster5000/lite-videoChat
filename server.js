@@ -14,8 +14,10 @@ const io = new Server(server, {
   }
 });
 
+const sockets = io.sockets
+
 const getClientRooms = () => {
-    const {rooms} = io.sockets.adapter;
+    const {rooms} = sockets.adapter;
 
     return Array.from(rooms.keys()).filter(roomId => validate(roomId) && version(roomId) === 4);
 }
@@ -36,11 +38,10 @@ io.on('connection', socket => {
         if(Array.from(joinedRooms).includes(roomId)) {
             return console.warn(`Already joined to ${roomId}`)
         }
-        console.log(io.sockets.adapter);
-        const clients = Array.from(io.sockets?.adapter?.rooms.get(roomId) || []);
+        const clients = Array.from(sockets.adapter.rooms.get(roomId) || []);
 
         clients.forEach(clientId => {
-            io.to(clientId).emit(ACTIONS.ADD_PEER, {
+            socket.to(clientId).emit(ACTIONS.ADD_PEER, {
                 peerId: socket.id,
                 createOffer: false
             });
@@ -59,10 +60,10 @@ io.on('connection', socket => {
         const {rooms} = socket;
 
         Array.from(rooms).forEach(roomId => {
-            const clients = Array.from(io.socket.adapter.room.get(roomId) || [])
+            const clients = Array.from(sockets.adapter.room?.get(roomId) || [])
 
             clients.forEach(clientId => {
-                io.to(clientId).emit(ACTIONS.REMOVE_PEER, {
+                socket.to(clientId).emit(ACTIONS.REMOVE_PEER, {
                     peerId: socket.id
                 });
 
@@ -78,6 +79,20 @@ io.on('connection', socket => {
 
     socket.on(ACTIONS.LEAVE, leaveRoom);
     socket.on('disconnecting', leaveRoom);
+
+    socket.on(ACTIONS.RELAY_SDP, ({peerId, sessionDescription}) => {
+        io.to(peerId).emit(ACTIONS.SESSION_DESCRIPTION, {
+            peerId: socket.id,
+            sessionDescription
+        })
+    })
+
+    socket.on(ACTIONS.RELAY_ICE, ({peerId, iceCandidate}) => {
+        io.to(peerId).emit(ACTIONS.ICE_CANDIDATE, {
+            peerId: socket.id,
+            iceCandidate
+        });
+    });
 });
 
 server.listen(PORT, () => {
